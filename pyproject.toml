@@ -22,6 +22,7 @@ dependencies = [
   "shapely>=2.0",
   "pyproj>=3.6",
   "pyyaml>=6.0",
+  "pyarrow>=14.0",  # GeoParquet export (FR-7)
 ]
 
 [project.optional-dependencies]
