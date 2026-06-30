@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: "If you use ProperTIQ, please cite it."
+title: "ProperTIQ: site suitability as code"
+authors:
+  - given-names: Mike
+    family-names: Maibach
+repository-code: "https://github.com/maibachmusik/ProperTIQ"
+license: MIT

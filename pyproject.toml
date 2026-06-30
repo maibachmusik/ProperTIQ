@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "propertiq"
+version = "0.0.1.dev0"
+description = "Site suitability as code — explainable, reproducible, bring-your-own-data parcel scoring."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Mike Maibach" }]
+keywords = ["gis", "geospatial", "site-selection", "suitability", "parcels", "real-estate"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Programming Language :: Python :: 3 :: Only",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+  "geopandas>=0.14",
+  "shapely>=2.0",
+  "pyproj>=3.6",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+viz = ["folium>=0.16", "leafmap>=0.30"]
+dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10", "pre-commit>=3.7"]
+
+[project.urls]
+Homepage = "https://github.com/maibachmusik/ProperTIQ"
+Documentation = "https://github.com/maibachmusik/ProperTIQ/blob/main/docs/PRD.md"
+Issues = "https://github.com/maibachmusik/ProperTIQ/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/propertiq"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
