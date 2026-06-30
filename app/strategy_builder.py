@@ -140,8 +140,8 @@ def _load_area(st, ss, mode: str, method: str, query: str, radius: float, upload
         if len(parcels) == 0:
             st.warning(
                 f"No demo parcels at {label} — the demo covers the Colorado Front "
-                "Range (try a Larimer County ZIP like 80538). Switch to "
-                "'Bring my own' to upload parcels for anywhere."
+                "Range (Larimer + Weld counties; try 80538 Loveland or 80631 "
+                "Greeley). Switch to 'Bring my own' to upload parcels for anywhere."
             )
             return
     else:

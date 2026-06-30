@@ -5,8 +5,8 @@
 Declare a weighted site-selection strategy, run it over *your* parcels, and get ranked
 candidates back with a transparent, per-criterion score breakdown.
 
-> Status: **alpha / pre-release.** The API below is the design target (see [`docs/PRD.md`](docs/PRD.md)).
-> Core scoring engine is being built toward `v0.1`.
+> Status: **v0.1.** Scoring engine, declarative YAML strategies, interactive maps, a
+> no-code config app, two worked notebooks on live open data, and docs are all in place.
 
 ---
 
@@ -23,15 +23,21 @@ scores them. That's what keeps it free, reproducible, and verticals-agnostic.
 ## What it is not
 
 - ❌ Not a hosted parcel-data service (bring your own data).
-- ❌ Not a web app or GUI.
 - ❌ Not skip-tracing, CRM, valuation/AVM, or sales forecasting.
+
+The core library is GUI-free. A separate, optional [config app](app/README.md) provides a
+no-code UI for people who'd rather not write Python.
 
 ## Install
 
 ```bash
-pip install propertiq          # core
-pip install "propertiq[viz]"   # + interactive maps (leafmap)
+pip install propertiq             # core: the scoring engine + maps
+pip install "propertiq[app]"      # + the no-code config app (Streamlit)
+pip install "propertiq[examples]" # + deps to run the example notebooks
+pip install "propertiq[viz]"      # + leafmap (folium ships with core)
 ```
+
+Python 3.10+.
 
 ## Quickstart
 
@@ -48,23 +54,22 @@ strategy = pq.Strategy(
         pq.AttrIn("zoning", ["industrial", "commercial", "agricultural"]),
     ],
     score=[
-        pq.Proximity(to=highways,     weight=0.30, prefer="near"),
-        pq.Gap(of=storage_pois,       within_mi=5, weight=0.25),   # competitor gap
-        pq.Index(acs_demand_index,    weight=0.25),
-        pq.Proximity(to=rv_dealers,   weight=0.20, prefer="near"),
+        pq.Proximity(to=highways,   weight=0.40, prefer="near"),
+        pq.Gap(of=storage_pois,     within_mi=5, weight=0.35),   # competitor gap
+        pq.AttrValue("acres",       weight=0.25, prefer="high"),
     ],
 )
 
 result = strategy.run(parcels)     # GeoDataFrame + score, rank, score_breakdown
 result.top(20)                     # highest-scoring candidates
-result.explain()                   # per-criterion contribution table
-result.to_map()                    # interactive map (needs [viz])
+result.explain()                   # per-criterion contribution table (sums to the score)
+result.to_map()                    # interactive folium map, colored by score
 result.to_file("candidates.geojson")
 ```
 
-## Strategy as code
+## Strategy as code (YAML)
 
-The same strategy as a version-controllable YAML file:
+The same strategy as a version-controllable file — the format the config app reads and writes:
 
 ```yaml
 # strategies/rv_storage.yaml
@@ -74,15 +79,36 @@ filters:
   - not_within: {layer: fema_floodplain}
   - attr_in:    {field: zoning, values: [industrial, commercial, agricultural]}
 score:
-  - proximity: {to: highways,     weight: 0.30, prefer: near}
-  - gap:       {of: storage_pois, within_mi: 5, weight: 0.25}
-  - index:     {layer: acs_demand_index, weight: 0.25}
-  - proximity: {to: rv_dealers,   weight: 0.20, prefer: near}
+  - proximity:  {to: highways,     weight: 0.40, prefer: near}
+  - gap:        {of: storage_pois, within_mi: 5, weight: 0.35}
+  - attr_value: {field: acres,     weight: 0.25, prefer: high}
 ```
 
 ```python
 result = pq.run("strategies/rv_storage.yaml", parcels, layers=layers)
 ```
+
+## No-code config app
+
+A standalone Strategy Builder for non-technical users:
+
+```bash
+pip install "propertiq[app]"
+streamlit run app/strategy_builder.py
+```
+
+Pick a search area by **ZIP or address + radius**, bring your own parcels (with links to county/
+state GIS portals) or use the built-in **Colorado Front Range demo** (real Larimer + Weld County
+parcels), compose filters and weighted criteria from a labeled list — every option explained
+inline — **tune the weights**, run, and export the candidates (GeoJSON) and the strategy (YAML).
+See [`app/README.md`](app/README.md).
+
+## Examples
+
+Worked notebooks on live open data ([`examples/`](examples)):
+
+- `rv_storage.ipynb` — RV/boat storage in Larimer County, CO.
+- `car_wash.ipynb` — car-wash siting on traffic + competitor gap + demand.
 
 ## Why ProperTIQ
 
@@ -93,8 +119,8 @@ verticals-agnostic middle.
 
 ## Docs
 
+- Full docs (concepts, blocks reference, API): `mkdocs serve` (with `pip install "propertiq[docs]"`).
 - [`docs/PRD.md`](docs/PRD.md) — full scope / product requirements.
-- [`examples/`](examples) — worked notebooks (RV/boat storage, car wash).
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — how to add a filter or scoring criterion.
 
 ## License

@@ -21,10 +21,29 @@ _MI_TO_M = 1609.344
 _SQM_PER_ACRE = 4046.8564224
 _SFHA = ["A", "AE", "AH", "AO", "AR", "A99", "V", "VE"]
 
-# Larimer County (CO Front Range demo) open endpoints.
-_PARCELS = "https://maps1.larimer.org/arcgis/rest/services/MapServices/Parcels/MapServer/3"
-_ZONING = "https://maps1.larimer.org/arcgis/rest/services/MapServices/LC_Zoning/MapServer/0"
+# FEMA floodplain (works anywhere in the US).
 _NFHL = "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28"
+
+# CO Front Range demo counties. Each: real open parcels (+ zoning where published).
+# Parcels carry no native area, so acres are derived from geometry.
+_DEMO_COUNTIES = (
+    {
+        "name": "Larimer",
+        "parcels": "https://maps1.larimer.org/arcgis/rest/services/MapServices/Parcels/MapServer/3",
+        "id_field": "PARCELNUM",
+        "fields": "PARCELNUM,LOCCITY",
+        "zoning": "https://maps1.larimer.org/arcgis/rest/services/MapServices/LC_Zoning/MapServer/0",
+        "zone_field": "ZONING_ABBRV_DISTRICT",
+    },
+    {
+        "name": "Weld",
+        "parcels": "https://services.arcgis.com/ewjSqmSyHJnkfBLL/arcgis/rest/services/Parcels_open_data/FeatureServer/0",
+        "id_field": "PARCEL",
+        "fields": "PARCEL,LOCCITY",
+        "zoning": None,  # Weld's open zoning layer exposes no usable code field
+        "zone_field": None,
+    },
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -90,29 +109,56 @@ def _esri(layer_url: str, bbox: tuple, fields: str) -> "Any":
     return gpd.GeoDataFrame.from_features(feats, crs=4326)
 
 
+def _fetch_county_parcels(county: dict, bbox: tuple) -> "Any":
+    """Real parcels for one demo county, normalized to parcel_id/city/acres/zone/county."""
+    import geopandas as gpd
+
+    raw = _esri(county["parcels"], bbox, county["fields"])
+    if len(raw) == 0:
+        return raw
+    out = gpd.GeoDataFrame(
+        {
+            "parcel_id": raw[county["id_field"]].astype(str) if county["id_field"] in raw else "",
+            "city": raw["LOCCITY"] if "LOCCITY" in raw else None,
+            "county": county["name"],
+            "geometry": raw.geometry,
+        },
+        crs=raw.crs,
+    )
+    out["acres"] = out.to_crs(5070).area / _SQM_PER_ACRE
+    out["zone"] = None
+    if county["zoning"]:
+        zoning = _esri(county["zoning"], bbox, county["zone_field"])
+        if len(zoning):
+            j = gpd.sjoin(
+                out.to_crs(5070),
+                zoning.to_crs(5070)[[county["zone_field"], "geometry"]],
+                predicate="intersects", how="left",
+            )
+            j = j[~j.index.duplicated(keep="first")]
+            out["zone"] = j[county["zone_field"]].reindex(out.index).values
+    return out
+
+
 def fetch_front_range_parcels(bbox: tuple) -> "Any":
-    """Real Larimer County parcels for the bbox, enriched with acres + zone.
+    """Real Front Range parcels for the bbox (Larimer + Weld), with acres + zone.
 
     Returns an empty GeoDataFrame if the AOI is outside the demo coverage.
     """
     import geopandas as gpd
+    import pandas as pd
 
-    parcels = _esri(_PARCELS, bbox, "PARCELNUM,LOCCITY")
-    if len(parcels) == 0:
-        return parcels
-    parcels["acres"] = parcels.to_crs(5070).area / _SQM_PER_ACRE
-    zoning = _esri(_ZONING, bbox, "ZONING_ABBRV_DISTRICT")
-    if len(zoning):
-        j = gpd.sjoin(
-            parcels.to_crs(5070),
-            zoning.to_crs(5070)[["ZONING_ABBRV_DISTRICT", "geometry"]],
-            predicate="intersects", how="left",
-        )
-        j = j[~j.index.duplicated(keep="first")]
-        parcels["zone"] = j["ZONING_ABBRV_DISTRICT"].reindex(parcels.index).values
-    else:
-        parcels["zone"] = None
-    return parcels
+    parts = []
+    for county in _DEMO_COUNTIES:
+        try:
+            part = _fetch_county_parcels(county, bbox)
+        except Exception:
+            continue
+        if len(part):
+            parts.append(part)
+    if not parts:
+        return gpd.GeoDataFrame({"geometry": []}, geometry="geometry", crs=4326)
+    return gpd.GeoDataFrame(pd.concat(parts, ignore_index=True), crs=4326)
 
 
 def fetch_context(bbox: tuple) -> dict[str, Any]:

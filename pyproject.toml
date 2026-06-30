@@ -49,5 +49,13 @@ target-version = "py310"
 python_version = "3.10"
 ignore_missing_imports = true
 
+# Don't analyze numpy's bundled stubs: recent numpy ships PEP 695 `type` statements
+# that mypy flags as a syntax error when targeting < 3.12. We don't type-check
+# against numpy internals anyway, so skip it.
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
