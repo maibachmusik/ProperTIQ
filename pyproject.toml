@@ -23,12 +23,13 @@ dependencies = [
   "pyproj>=3.6",
   "pyyaml>=6.0",
   "pyarrow>=14.0",  # GeoParquet export (FR-7)
+  "folium>=0.16",   # core map engine for Result.to_map (PRD N-4)
 ]
 
 [project.optional-dependencies]
-viz = ["folium>=0.16", "leafmap>=0.30"]
-app = ["streamlit>=1.36", "streamlit-folium>=0.20", "folium>=0.16"]
-examples = ["osmnx>=2.0", "folium>=0.16", "mapclassify>=2.6"]
+viz = ["leafmap>=0.30"]
+app = ["streamlit>=1.36", "streamlit-folium>=0.20"]
+examples = ["osmnx>=2.0", "mapclassify>=2.6"]
 dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10", "pre-commit>=3.7"]
 
 [project.urls]

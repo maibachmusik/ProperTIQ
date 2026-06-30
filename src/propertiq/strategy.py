@@ -191,9 +191,30 @@ class Result:
             table.insert(0, "rank", self.parcels["rank"].values)
         return table
 
-    def to_map(self):
-        """Render an interactive map (folium; leafmap via the ``[viz]`` extra)."""
-        raise NotImplementedError("map rendering lands in v0.2 (spec: viz).")
+    def to_map(
+        self,
+        column: str = "score",
+        *,
+        n: "int | None" = None,
+        cmap: str = "YlGn",
+        tiles: str = "CartoDB positron",
+        tooltip_fields: "list[str] | None" = None,
+    ):
+        """Render the candidates as an interactive folium map colored by ``column``.
+
+        Each parcel's tooltip shows its rank, score, and per-criterion breakdown.
+        See :func:`propertiq.viz.to_map`.
+        """
+        from .viz import to_map
+
+        return to_map(
+            self.parcels,
+            column=column,
+            n=n,
+            cmap=cmap,
+            tiles=tiles,
+            tooltip_fields=tooltip_fields,
+        )
 
     def to_file(self, path: str) -> None:
         """Export candidates to GeoJSON or GeoParquet (by extension)."""
