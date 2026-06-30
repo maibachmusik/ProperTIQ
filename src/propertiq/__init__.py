@@ -9,7 +9,7 @@ the scoring engine is being implemented toward ``v0.1``.
 
 from __future__ import annotations
 
-__version__ = "0.0.1.dev0"
+__version__ = "0.1.0"
 
 from .strategy import Strategy, Result, run
 from .filters import MinArea, MaxArea, NotWithin, Within, AttrIn, AttrRange

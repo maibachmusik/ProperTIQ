@@ -16,3 +16,8 @@ data/
 *.gpkg
 *.shp
 *.geoparquet
+# notebook / demo run artifacts (regenerated when the notebook runs)
+cache/
+examples/cache/
+examples/rv_candidates.geojson
+examples/rv_storage.yaml

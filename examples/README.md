@@ -3,9 +3,12 @@
 Worked notebooks running real, open data only. Each: load → declare strategy →
 run → top-N map → `explain()` → export.
 
-- `rv_storage_front_range.ipynb` — RV/boat storage on the Colorado Front Range
-  (Larimer County parcels + ACS demand index + OSM storage POIs + RV dealers +
-  FEMA flood + 3DEP slope). *(coming in v0.1)*
-- `car_wash_corridor.ipynb` — car-wash site finder along a metro corridor
-  (~1-acre commercial parcels + ACS income/vehicles + ADT + competitor
-  saturation + retail co-tenancy). *(coming in v0.2)*
+Install the demo deps with `pip install "propertiq[examples]"`.
+
+- **`rv_storage.ipynb`** — RV/boat storage in Larimer County, CO. Pulls open
+  parcels + zoning + FEMA floodplain (county/FEMA ArcGIS) and highways +
+  competitors (OpenStreetMap via `osmnx`), then filters (zoning, size, avoid
+  floodplain) and scores (highway proximity, competitor gap, acreage). Ends with a
+  ranked map, a per-criterion `explain()` breakdown, and a GeoJSON + YAML export.
+  The exported YAML is the same format the [config app](../app/README.md) uses.
+- `car_wash_corridor.ipynb` — car-wash site finder along a metro corridor. *(coming in v0.2)*
