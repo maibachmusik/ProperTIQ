@@ -161,6 +161,12 @@ class Strategy:
         gdf["rank"] = range(1, len(gdf) + 1)
         return Result(parcels=gdf, strategy=self)
 
+    def to_config(self, layer_names: "dict[int, str] | None" = None) -> dict[str, Any]:
+        """Serialize this strategy to a config dict (see :mod:`propertiq.config`)."""
+        from .config import to_config
+
+        return to_config(self, layer_names=layer_names)
+
 
 @dataclass
 class Result:
@@ -206,7 +212,18 @@ def run(
     """
     if isinstance(strategy, Strategy):
         return strategy.run(parcels)
-    raise NotImplementedError("YAML loader lands in v0.2 — see spec 003: yaml-strategies.")
+    if isinstance(strategy, dict):
+        from .config import from_config
+
+        return from_config(strategy, layers=layers).run(parcels)
+    if isinstance(strategy, str):
+        from .io import load_strategy
+
+        return load_strategy(strategy, layers=layers).run(parcels)
+    raise TypeError(
+        f"strategy must be a Strategy, a config dict, or a path to a YAML file; "
+        f"got {type(strategy).__name__}."
+    )
 
 
 def _breakdown_to_json(value: Any) -> str:

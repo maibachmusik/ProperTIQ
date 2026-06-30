@@ -1,21 +1,45 @@
-"""I/O: write scored candidates to open formats; (v0.2) load YAML strategies.
+"""I/O: write scored candidates to open formats; load/dump YAML strategies.
 
-Implements ``spec 001`` export (FR-7). The YAML loader is deferred to spec 003.
+Implements ``spec 001`` export (FR-7) and ``spec 002`` YAML round-trip (FR-C4).
 """
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import geopandas as gpd
 
+    from .strategy import Strategy
 
-def load_strategy(path: str) -> object:
-    """Parse a YAML strategy file into a :class:`propertiq.Strategy`."""
-    raise NotImplementedError("YAML loader lands in v0.2 — see spec 003: yaml-strategies.")
+
+def load_strategy(path: str, layers: dict[str, Any] | None = None) -> "Strategy":
+    """Parse a YAML strategy file into a :class:`propertiq.Strategy`.
+
+    ``layers`` maps the layer names referenced in the file (e.g. ``highways``,
+    ``fema_floodplain``) to GeoDataFrames.
+    """
+    import yaml
+
+    from .config import from_config
+
+    with open(path) as fh:
+        config = yaml.safe_load(fh)
+    return from_config(config, layers=layers)
+
+
+def dump_strategy(
+    strategy: "Strategy", path: str, layer_names: dict[int, str] | None = None
+) -> None:
+    """Serialize a :class:`Strategy` to a YAML file (see ``config.to_config``)."""
+    import yaml
+
+    from .config import to_config
+
+    with open(path, "w") as fh:
+        yaml.safe_dump(to_config(strategy, layer_names=layer_names), fh, sort_keys=False)
 
 
 def to_file(gdf: "gpd.GeoDataFrame", path: str) -> None:

@@ -14,6 +14,9 @@ __version__ = "0.0.1.dev0"
 from .strategy import Strategy, Result, run
 from .filters import MinArea, MaxArea, NotWithin, Within, AttrIn, AttrRange
 from .scoring import Proximity, Gap, Index, AttrValue
+from .config import from_config, to_config
+from .io import load_strategy, dump_strategy, to_file
+from . import registry
 
 __all__ = [
     "Strategy",
@@ -31,4 +34,11 @@ __all__ = [
     "Gap",
     "Index",
     "AttrValue",
+    # config / registry
+    "from_config",
+    "to_config",
+    "load_strategy",
+    "dump_strategy",
+    "to_file",
+    "registry",
 ]

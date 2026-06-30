@@ -42,7 +42,11 @@ makes it free to give away and dissolves the data-moat problem that the paid too
 ### Non-goals (deliberate "outs")
 - ❌ Hosting/serving parcel data (BYO).
 - ❌ A nationwide parcel/zoning normalizer (separate project; a maintenance treadmill).
-- ❌ A hosted web app or GUI.
+- ❌ A GUI *inside the core library* — `propertiq` stays a thin, GUI-free Python core.
+  *(Amended 2026-06-30, owner decision: a **standalone companion config app** —
+  a no-code strategy builder with matching tooltips — is now in scope as a
+  separate, optional deployable so non-technical users can compose/edit rules per
+  deployment. It depends on the core; the core never depends on it. See spec 003.)*
 - ❌ Skip-tracing / outreach / CRM / valuation / sales forecasting.
 - ❌ Raster-first workflows (vector/parcel-centric first; raster criteria can come later).
 
