@@ -21,3 +21,7 @@ cache/
 examples/cache/
 examples/rv_candidates.geojson
 examples/rv_storage.yaml
+examples/car_wash_candidates.geojson
+examples/car_wash.yaml
+# mkdocs build output
+site/

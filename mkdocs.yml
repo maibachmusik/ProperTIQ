@@ -1,0 +1,60 @@
+site_name: ProperTIQ
+site_description: Site suitability as code — explainable, reproducible, bring-your-own-data parcel scoring.
+repo_url: https://github.com/maibachmusik/ProperTIQ
+repo_name: maibachmusik/ProperTIQ
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - toc.follow
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Concepts: concepts.md
+  - Blocks reference: blocks.md
+  - Declarative strategies (YAML): yaml.md
+  - Config app: config-app.md
+  - Examples: examples.md
+  - API reference: api.md
+  - Scope (PRD): PRD.md
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+        - scripts/gen_blocks.py
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_root_heading: true
+            show_source: false
+            docstring_style: numpy
+            members_order: source
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - tables
