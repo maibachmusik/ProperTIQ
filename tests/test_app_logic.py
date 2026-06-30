@@ -94,3 +94,48 @@ def test_app_module_is_import_safe():
         pytest.skip("streamlit not installed")
     mod = importlib.import_module("app.strategy_builder")
     assert hasattr(mod, "main")
+
+
+def test_normalized_weights_auto_balance():
+    state = {
+        "score": [
+            {"key": "proximity", "params": {"to": "highways", "weight": 0.6}},
+            {"key": "attr_value", "params": {"field": "acres", "weight": 0.2}},
+        ],
+    }
+    w = _logic.normalized_weights(state)
+    assert sum(w.values()) == pytest.approx(1.0)
+    # 0.6 vs 0.2 -> 0.75 / 0.25 after normalization
+    assert w["Proximity to a layer"] == pytest.approx(0.75)
+    assert w["Parcel attribute value"] == pytest.approx(0.25)
+
+
+def test_tuning_weight_changes_ranking(parcels, highway):
+    """SC-A8: changing a weight (via state) changes the ranking."""
+    base = {
+        "score": [
+            {"key": "proximity", "params": {"to": "highways", "prefer": "near", "weight": 0.9}},
+            {"key": "attr_value", "params": {"field": "assessed_value", "prefer": "low", "weight": 0.1}},
+        ],
+    }
+    tuned = {
+        "score": [
+            {"key": "proximity", "params": {"to": "highways", "prefer": "near", "weight": 0.1}},
+            {"key": "attr_value", "params": {"field": "assessed_value", "prefer": "low", "weight": 0.9}},
+        ],
+    }
+    layers = {"highways": highway}
+    r1 = pq.from_config(_logic.session_to_config(base), layers=layers).run(parcels)
+    r2 = pq.from_config(_logic.session_to_config(tuned), layers=layers).run(parcels)
+    assert r1.parcels["pid"].tolist() != r2.parcels["pid"].tolist()
+
+
+def test_aoi_from_point_bbox_surrounds_center():
+    """SC-A6 (geometry half): a point + radius yields a bbox centered on it."""
+    pytest.importorskip("geopandas")
+    from app import _aoi
+
+    lat, lon = 40.4262, -105.0900  # Loveland, CO
+    circle, (w, s, e, n) = _aoi.aoi_from_point(lat, lon, 3.0)
+    assert w < lon < e and s < lat < n
+    assert circle.contains(__import__("shapely").geometry.Point(lon, lat))

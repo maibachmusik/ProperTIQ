@@ -28,7 +28,7 @@ dependencies = [
 
 [project.optional-dependencies]
 viz = ["leafmap>=0.30"]
-app = ["streamlit>=1.36", "streamlit-folium>=0.20"]
+app = ["streamlit>=1.36", "streamlit-folium>=0.20", "osmnx>=2.0", "pgeocode>=0.4", "mapclassify>=2.6"]
 examples = ["osmnx>=2.0", "mapclassify>=2.6"]
 docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.25", "mkdocs-gen-files>=0.5"]
 dev = ["pytest>=8", "ruff>=0.5", "mypy>=1.10", "pre-commit>=3.7"]

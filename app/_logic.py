@@ -118,3 +118,22 @@ def _is_set(value: Any) -> bool:
     if isinstance(value, (list, tuple, str)) and len(value) == 0:
         return False
     return True
+
+
+def normalized_weights(state: dict[str, Any]) -> dict[str, float]:
+    """Each scoring block's display label → its auto-normalized weight (0–1).
+
+    Mirrors the engine's weight normalization so the tuning UI can show users the
+    effective contribution of each criterion as they slide the weights.
+    """
+    crits = state.get("score", [])
+    raw = [float(b.get("params", {}).get("weight") or 0.0) for b in crits]
+    total = sum(raw)
+    names, seen = [], {}
+    for b in crits:
+        base = registry.get(b["key"]).label
+        seen[base] = seen.get(base, 0) + 1
+        names.append(base if seen[base] == 1 else f"{base} ({seen[base]})")
+    if total <= 0:
+        return {n: 0.0 for n in names}
+    return {n: r / total for n, r in zip(names, raw)}

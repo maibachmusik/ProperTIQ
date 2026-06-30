@@ -81,3 +81,53 @@ the strategy. The app is the configuration surface; the library is the engine.
 ## Open questions
 - Multi-strategy management / saved-library UI — defer to a later iteration; v1
   is single-strategy build/run/export.
+
+---
+
+## Revision 1.1 (2026-06-30) — Area of interest, parcel sourcing, live tuning
+
+Owner feedback after the first demo: the output is great, but the input UX needs
+to (a) **start a search from a place** (ZIP or point + radius), (b) make the
+**bring-your-own-parcels** path explicit — most users get parcels from their
+**county/state GIS portal**, download them, and upload here — and (c) let users
+**tune weights and re-run** interactively. The first build's add/remove/run
+buttons also misbehaved and must reliably work.
+
+### Product model (resolved)
+- **Parcels are BYO.** The app guides the user to find parcels at their county or
+  state GIS portal, download (GeoJSON/GeoParquet/Shapefile-zip), and upload.
+- **Demo mode** ships for the **Colorado Front Range** (Larimer County): the app
+  can auto-fetch real parcels + zoning + traffic + floodplain for the chosen AOI
+  so it demos with zero setup. Out-of-region AOIs fall back to the BYO path.
+- Data fetching lives in **app code only** (`app/_aoi.py`), never the core library
+  — the library stays BYO/never-fetch (constitution 2).
+
+### Area of interest
+- Set the AOI by **ZIP code** or **address/place name**, plus a **radius (miles)**.
+- Geocode to a center point; the radius defines a circular AOI (and its bbox).
+- Context layers (roads, competitors, floodplain) are auto-fetched for the AOI in
+  both demo and BYO modes; uploaded parcels are **clipped to the AOI**.
+
+### New functional requirements
+| ID | Requirement | Acceptance |
+|---|---|---|
+| FR-A9  | Set AOI by ZIP or address + radius; geocode to center + bbox | Valid place → center/bbox; bad input → clear message |
+| FR-A10 | Demo mode auto-fetches real Front Range parcels + context for the AOI | A CO Front Range ZIP yields real parcels and a ranked result with no upload |
+| FR-A11 | BYO mode: guidance to county/state parcel portals + upload, clipped to AOI | Upload loads; parcels clipped to the radius; guidance text + links shown |
+| FR-A12 | Live weight tuning: a slider per scoring criterion; re-run updates table+map | Moving a weight and re-running changes ranks; weights still auto-normalize |
+| FR-A13 | Add / remove / run buttons work reliably across reruns | Adding a block shows it; removing drops it; Run produces results; verified by an interactive (Playwright) smoke |
+
+### New success criteria
+- **SC-A6:** Geocoding a CO Front Range ZIP (e.g. 80538) returns a center within
+  the demo region and a usable bbox (unit-testable with a stubbed/real geocoder).
+- **SC-A7 (interactive):** Playwright drives the app: pick demo AOI → add a filter
+  and two criteria → Run → ranked table + map appear; remove a block → it's gone.
+- **SC-A8:** Tuning a weight and re-running yields a different ranking (logic-level
+  test on `session_to_config` with changed weights).
+
+### Stable interaction model (fixes FR-A13)
+- Each block gets a **stable id** (monotonic counter), not a list index, so widget
+  keys don't collide when blocks are added/removed.
+- Add/remove use **`on_click` callbacks** that mutate `st.session_state`; the AOI
+  uses a **form** so typing doesn't trigger a fetch every keystroke; **Run** sets a
+  flag and results render from cached state.
