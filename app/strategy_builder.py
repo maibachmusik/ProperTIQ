@@ -23,11 +23,22 @@ from propertiq import registry
 
 # Work both as a package module (tests) and as a `streamlit run` script.
 try:
-    from app import _aoi, _enrich, _logic
+    from app import _aoi, _enrich, _logic, presets as _presets
 except ImportError:  # pragma: no cover - the `streamlit run` path
     import _aoi  # type: ignore[no-redef]
     import _enrich  # type: ignore[no-redef]
     import _logic  # type: ignore[no-redef]
+    import presets as _presets  # type: ignore[no-redef]
+
+
+def _load_preset(ss, preset: dict) -> None:
+    """Populate the builder from a preset config, assigning fresh block ids."""
+    state = _logic.config_to_session(preset["config"])
+    for section in ("filters", "score"):
+        for block in state[section]:
+            block["id"] = _next_id(ss)
+    ss.state = state
+    ss.result = None
 
 # Verified Colorado Front Range county parcel portals (for the bring-your-own guide).
 _CO_PORTALS = [
@@ -302,6 +313,23 @@ def main() -> None:  # pragma: no cover - exercised via streamlit, not unit test
 
     field_names = [c for c in parcels.columns if c != parcels.geometry.name]
     layer_names = list(ss.layers)
+
+    # Presets: one click populates the builder with a ready-made strategy.
+    with st.expander("⚡ Start from a preset strategy"):
+        labels = {p["label"]: p for p in _presets.PRESETS}
+        pick = st.selectbox("Preset", list(labels), key="preset_pick")
+        chosen = labels[pick]
+        st.caption(chosen["desc"])
+        missing = _presets.missing_data(chosen, field_names, layer_names)
+        if missing:
+            st.caption(
+                f"ⓘ Needs data not loaded yet: {', '.join(missing)} — load it above "
+                "(the preset still loads; fix any unset dropdowns)."
+            )
+        if st.button("Load this preset", key="load_preset"):
+            _load_preset(ss, chosen)
+            st.success(f"Loaded '{chosen['label']}'. Tune the weights below and run.")
+            st.rerun()
 
     # ---------------- Step 2 · Strategy ------------------------------------ #
     ss.state["name"] = st.text_input("Strategy name", ss.state.get("name", "my_strategy"))

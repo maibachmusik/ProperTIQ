@@ -275,6 +275,7 @@ REGISTRY: tuple[BlockSpec, ...] = (
                 "Aspect column",
                 "The parcel column holding aspect in degrees (0=N, 90=E). Added by terrain data.",
                 default="aspect_deg",
+                required=False,
             ),
         ),
     ),
