@@ -23,19 +23,32 @@ from propertiq import registry
 
 # Work both as a package module (tests) and as a `streamlit run` script.
 try:
-    from app import _aoi, _logic
+    from app import _aoi, _enrich, _logic
 except ImportError:  # pragma: no cover - the `streamlit run` path
     import _aoi  # type: ignore[no-redef]
+    import _enrich  # type: ignore[no-redef]
     import _logic  # type: ignore[no-redef]
 
 # Verified Colorado Front Range county parcel portals (for the bring-your-own guide).
 _CO_PORTALS = [
     ("Larimer", "https://www.larimer.gov/it/gis", "GIS Digital Data page (no one-click hub)"),
     ("Weld", "https://gishub.weldgov.com", "search 'parcels' → Download"),
-    ("Boulder", "https://opendata-bouldercounty.hub.arcgis.com/datasets/parcels", "Download → GeoJSON/Shapefile"),
-    ("Adams", "https://data-adcogov.opendata.arcgis.com/datasets/ADCOGOV::parcels/about", "Download → GeoJSON/Shapefile"),
+    (
+        "Boulder",
+        "https://opendata-bouldercounty.hub.arcgis.com/datasets/parcels",
+        "Download → GeoJSON/Shapefile",
+    ),
+    (
+        "Adams",
+        "https://data-adcogov.opendata.arcgis.com/datasets/ADCOGOV::parcels/about",
+        "Download → GeoJSON/Shapefile",
+    ),
     ("Denver", "https://opendata-geospatialdenver.hub.arcgis.com/", "search 'parcels' → Download"),
-    ("Jefferson", "https://data-jeffersoncounty.opendata.arcgis.com/datasets/jeffersoncounty::parcel/explore", "Download → GeoJSON/Shapefile"),
+    (
+        "Jefferson",
+        "https://data-jeffersoncounty.opendata.arcgis.com/datasets/jeffersoncounty::parcel/explore",
+        "Download → GeoJSON/Shapefile",
+    ),
     ("El Paso", "https://opendata-elpasoco.hub.arcgis.com/", "search 'parcels' → Download"),
 ]
 _CO_STATEWIDE = "https://geodata.colorado.gov/datasets/colorado-public-parcels/about"
@@ -49,9 +62,8 @@ def _next_id(ss) -> int:
     return ss._next_id
 
 
-def _add_block(ss, section: str, label_to_key: dict[str, str]) -> None:
-    label = ss[f"pick_{section}"]
-    key = label_to_key[label]
+def _add_block(ss, section: str) -> None:
+    key = ss[f"pick_{section}"]  # the picker's value is the block key
     ss.state[section].append({"id": _next_id(ss), **_logic.new_block_state(key)})
 
 
@@ -71,12 +83,18 @@ def _render_param(st, wspec: dict[str, Any], block: dict, section: str) -> Any:
 
     if name == "weight":
         v = float(cur) if cur is not None else 1.0
-        return st.slider(label, 0.0, 1.0, value=min(max(v, 0.0), 1.0), step=0.05, key=key, help=help_)
+        return st.slider(
+            label, 0.0, 1.0, value=min(max(v, 0.0), 1.0), step=0.05, key=key, help=help_
+        )
     if kind in ("number", "integer"):
         if wspec["required"]:
-            return st.number_input(label, value=float(cur) if cur is not None else 0.0, key=key, help=help_)
+            return st.number_input(
+                label, value=float(cur) if cur is not None else 0.0, key=key, help=help_
+            )
         # optional numeric (e.g. AttrRange min/max) — allow blank
-        return st.number_input(label, value=float(cur) if cur is not None else None, key=key, help=help_)
+        return st.number_input(
+            label, value=float(cur) if cur is not None else None, key=key, help=help_
+        )
     if kind == "bool":
         return st.checkbox(label, value=bool(cur), key=key, help=help_)
     if kind == "multiselect":
@@ -93,25 +111,33 @@ def _render_param(st, wspec: dict[str, Any], block: dict, section: str) -> Any:
 
 def _section(st, ss, section: str, parcels, layer_names, field_names) -> None:
     specs = registry.filters() if section == "filters" else registry.criteria()
-    label_to_key = {b.label: b.key for b in specs}
-    picked = ss.get(f"pick_{section}", next(iter(label_to_key)))
-    desc = next((b.description for b in specs if b.label == picked), "")
+    order = {c: i for i, c in enumerate(registry.categories())}
+    specs = sorted(specs, key=lambda b: (order.get(b.category, 99), b.label))
+    keys = [b.key for b in specs]
 
+    def fmt(k: str) -> str:  # group visually: "Site & terrain · Cardinal direction facing"
+        b = registry.get(k)
+        return f"{b.category} · {b.label}"
+
+    picked = ss.get(f"pick_{section}", keys[0])
     c1, c2 = st.columns([4, 1])
     c1.selectbox(
         "Add a filter" if section == "filters" else "Add a scoring criterion",
-        list(label_to_key), key=f"pick_{section}", help=desc,
+        keys,
+        format_func=fmt,
+        key=f"pick_{section}",
+        help=registry.get(picked).description,
     )
-    c2.button(
-        "➕ Add", key=f"addbtn_{section}", on_click=_add_block, args=(ss, section, label_to_key)
-    )
+    c2.button("➕ Add", key=f"addbtn_{section}", on_click=_add_block, args=(ss, section))
 
     for block in ss.state[section]:
         spec = registry.get(block["key"])
         with st.expander(spec.label, expanded=True):
             st.caption(spec.description)
             for p in spec.params:
-                wspec = _logic.param_widget_spec(p, layer_names=layer_names, field_names=field_names)
+                wspec = _logic.param_widget_spec(
+                    p, layer_names=layer_names, field_names=field_names
+                )
                 # The "allowed values" multiselect populates from the chosen field's values.
                 if p.name == "values":
                     fld = block["params"].get("field")
@@ -120,8 +146,10 @@ def _section(st, ss, section: str, parcels, layer_names, field_names) -> None:
                         wspec["options"] = vals[:1000]
                 block["params"][p.name] = _render_param(st, wspec, block, section)
             st.button(
-                "🗑 Remove", key=f"rm_{section}_{block['id']}",
-                on_click=_remove_block, args=(ss, section, block["id"]),
+                "🗑 Remove",
+                key=f"rm_{section}_{block['id']}",
+                on_click=_remove_block,
+                args=(ss, section, block["id"]),
             )
 
 
@@ -155,13 +183,23 @@ def _load_area(st, ss, mode: str, method: str, query: str, radius: float, upload
         if "acres" not in parcels.columns:
             parcels["acres"] = parcels.to_crs(5070).area / 4046.8564224
 
+    layers = _aoi.fetch_context(bbox)  # highways, floodplain
+    try:
+        # Terrain is fast (3DEP): attach slope_deg + aspect_deg so Facing/slope
+        # rules work immediately. OSM structures/layers load on demand (slower).
+        parcels = _enrich.add_terrain(parcels)
+    except Exception as exc:
+        st.info(f"Terrain data unavailable ({exc}); other rules still work.")
+
     ss.parcels = parcels
-    ss.layers = _aoi.fetch_context(bbox)
+    ss.layers = layers
     ss.aoi = {"label": label, "lat": lat, "lon": lon, "radius": radius, "bbox": bbox}
     ss.result = None
+    added = [c for c in ("slope_deg", "aspect_deg") if c in parcels.columns]
     st.success(
-        f"Loaded {len(parcels):,} parcels near {label} "
-        f"({radius} mi). Context layers: {', '.join(ss.layers) or 'none'}."
+        f"Loaded {len(parcels):,} parcels near {label} ({radius} mi). "
+        f"Layers: {', '.join(layers) or 'none'}."
+        + (f" Terrain: {', '.join(added)}." if added else "")
     )
 
 
@@ -176,7 +214,9 @@ def main() -> None:  # pragma: no cover - exercised via streamlit, not unit test
     ss.setdefault("_next_id", 0)
 
     st.title("ProperTIQ — Strategy Builder")
-    st.caption("Find land that fits your rules — score & rank parcels, no code. Every option is explained inline.")
+    st.caption(
+        "Find land that fits your rules — score & rank parcels, no code. Every option is explained inline."
+    )
 
     # ---------------- Step 1 · Area + data --------------------------------- #
     st.header("1 · Search area & parcels")
@@ -195,8 +235,10 @@ def main() -> None:  # pragma: no cover - exercised via streamlit, not unit test
                 + f"\n- **Colorado statewide** — [Colorado Public Parcels]({_CO_STATEWIDE})\n\n"
                 "_Most counties: search 'parcels' → Download → GeoJSON/Shapefile._"
             )
-        upload = st.file_uploader("Parcels (GeoJSON / GeoParquet / zipped Shapefile)",
-                                  type=["geojson", "json", "parquet", "zip"])
+        upload = st.file_uploader(
+            "Parcels (GeoJSON / GeoParquet / zipped Shapefile)",
+            type=["geojson", "json", "parquet", "zip"],
+        )
     else:
         upload = None
 
@@ -207,7 +249,7 @@ def main() -> None:  # pragma: no cover - exercised via streamlit, not unit test
         value="80538" if method == "ZIP code" else "",
         placeholder="80538" if method == "ZIP code" else "Loveland, CO",
     )
-    radius = c3.slider("Search radius (miles)", 0.5, 15.0, 3.0, step=0.5)
+    radius = c3.slider("Search radius (miles)", 0.5, 15.0, 1.5, step=0.5)
     if st.button("📍 Load area", type="primary"):
         if not query.strip():
             st.error("Enter a ZIP or address.")
@@ -223,6 +265,26 @@ def main() -> None:  # pragma: no cover - exercised via streamlit, not unit test
         st.info("Pick a search area and click **Load area** to begin.")
         return
     st.caption(f"📦 {len(parcels):,} parcels · layers: {', '.join(ss.layers) or 'none'}")
+
+    # On-demand: OSM structures + site layers (buildings, water, power, roads).
+    # Kept off the fast path because the first OSM pull can take a while.
+    if "structures" not in parcels.columns:
+        if st.button("🏗 Add structures & site layers (buildings, water, power, roads)"):
+            with st.spinner("Fetching OpenStreetMap structures & site layers…"):
+                try:
+                    site_layers = _enrich.fetch_site_layers(ss.aoi["bbox"])
+                    ss.layers.update(site_layers)
+                    if "buildings" in site_layers:
+                        ss.parcels = _enrich.add_structures(parcels, site_layers["buildings"])
+                    st.success(
+                        f"Added: {', '.join(site_layers) or 'none'} (+ a `structures` count)."
+                    )
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"{type(exc).__name__}: {exc}")
+    else:
+        st.caption(f"🏗 structures loaded (max {int(parcels['structures'].max())} per parcel).")
+    parcels = ss.get("parcels")
 
     # Optional: pull a competitor / POI layer from OpenStreetMap for the AOI.
     with st.expander("Add a competitor / POI layer from OpenStreetMap"):
@@ -281,8 +343,11 @@ def main() -> None:  # pragma: no cover - exercised via streamlit, not unit test
         st.success(f"{len(result.parcels):,} candidate parcels, ranked.")
         n = st.slider("Show top N", 1, min(200, len(result.parcels)), min(20, len(result.parcels)))
         top = result.top(n)
-        cols = [c for c in top.columns if c != top.geometry.name and not c.startswith("signal__")
-                and c != "score_breakdown"]
+        cols = [
+            c
+            for c in top.columns
+            if c != top.geometry.name and not c.startswith("signal__") and c != "score_breakdown"
+        ]
         st.dataframe(top[cols], width="stretch")
 
         st.subheader("Why each scored what it did")
@@ -302,8 +367,9 @@ def main() -> None:  # pragma: no cover - exercised via streamlit, not unit test
             score_breakdown=result.parcels["score_breakdown"].apply(str)
         ).to_file(gj, driver="GeoJSON")
         e1.download_button("Candidates (GeoJSON)", gj.getvalue(), f"{ss.state['name']}.geojson")
-        e2.download_button("Strategy (YAML)", yaml.safe_dump(config, sort_keys=False),
-                           f"{ss.state['name']}.yaml")
+        e2.download_button(
+            "Strategy (YAML)", yaml.safe_dump(config, sort_keys=False), f"{ss.state['name']}.yaml"
+        )
     elif result is not None:
         st.warning("No parcels survived the filters — loosen a filter and run again.")
 

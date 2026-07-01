@@ -12,8 +12,18 @@ from __future__ import annotations
 __version__ = "0.1.0"
 
 from .strategy import Strategy, Result, run
-from .filters import MinArea, MaxArea, NotWithin, Within, AttrIn, AttrRange
-from .scoring import Proximity, Gap, Index, AttrValue
+from .filters import (
+    MinArea,
+    MaxArea,
+    NotWithin,
+    Within,
+    AttrIn,
+    AttrRange,
+    WithinDistance,
+    CountRange,
+    Facing,
+)
+from .scoring import Proximity, Gap, Index, AttrValue, NearbyCount
 from .config import from_config, to_config
 from .io import load_strategy, dump_strategy, to_file
 from . import registry
@@ -29,11 +39,15 @@ __all__ = [
     "Within",
     "AttrIn",
     "AttrRange",
+    "WithinDistance",
+    "CountRange",
+    "Facing",
     # scoring
     "Proximity",
     "Gap",
     "Index",
     "AttrValue",
+    "NearbyCount",
     # config / registry
     "from_config",
     "to_config",

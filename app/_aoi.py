@@ -97,10 +97,15 @@ def _esri(layer_url: str, bbox: tuple, fields: str) -> "Any":
 
     w, s, e, n = bbox
     q = {
-        "where": "1=1", "geometry": f"{w},{s},{e},{n}",
-        "geometryType": "esriGeometryEnvelope", "inSR": "4326",
-        "spatialRel": "esriSpatialRelIntersects", "outFields": fields,
-        "outSR": "4326", "returnGeometry": "true", "f": "geojson",
+        "where": "1=1",
+        "geometry": f"{w},{s},{e},{n}",
+        "geometryType": "esriGeometryEnvelope",
+        "inSR": "4326",
+        "spatialRel": "esriSpatialRelIntersects",
+        "outFields": fields,
+        "outSR": "4326",
+        "returnGeometry": "true",
+        "f": "geojson",
     }
     gj = json.loads(_get(layer_url + "/query?" + urllib.parse.urlencode(q)))
     feats = gj.get("features", [])
@@ -133,7 +138,8 @@ def _fetch_county_parcels(county: dict, bbox: tuple) -> "Any":
             j = gpd.sjoin(
                 out.to_crs(5070),
                 zoning.to_crs(5070)[[county["zone_field"], "geometry"]],
-                predicate="intersects", how="left",
+                predicate="intersects",
+                how="left",
             )
             j = j[~j.index.duplicated(keep="first")]
             out["zone"] = j[county["zone_field"]].reindex(out.index).values

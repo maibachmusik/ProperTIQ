@@ -115,13 +115,19 @@ def test_tuning_weight_changes_ranking(parcels, highway):
     base = {
         "score": [
             {"key": "proximity", "params": {"to": "highways", "prefer": "near", "weight": 0.9}},
-            {"key": "attr_value", "params": {"field": "assessed_value", "prefer": "low", "weight": 0.1}},
+            {
+                "key": "attr_value",
+                "params": {"field": "assessed_value", "prefer": "low", "weight": 0.1},
+            },
         ],
     }
     tuned = {
         "score": [
             {"key": "proximity", "params": {"to": "highways", "prefer": "near", "weight": 0.1}},
-            {"key": "attr_value", "params": {"field": "assessed_value", "prefer": "low", "weight": 0.9}},
+            {
+                "key": "attr_value",
+                "params": {"field": "assessed_value", "prefer": "low", "weight": 0.9},
+            },
         ],
     }
     layers = {"highways": highway}

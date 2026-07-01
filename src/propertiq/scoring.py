@@ -71,6 +71,41 @@ class Gap(Criterion):
 
 
 @dataclass
+class NearbyCount(Criterion):
+    """Score by how many features of ``of`` are within ``within_mi`` of a parcel.
+
+    ``prefer='high'`` rewards density (built-up areas, nearby amenities);
+    ``prefer='low'`` rewards isolation. (``Gap`` is the competitor-specific
+    ``prefer='low'`` case.)
+    """
+
+    of: Any  # GeoDataFrame
+    within_mi: float = 1.0
+    weight: float = 1.0
+    prefer: Literal["high", "low"] = "high"
+    name: str | None = None
+
+    def raw(self, parcels: "gpd.GeoDataFrame", crs: str) -> "pd.Series":
+        import geopandas as gpd
+        import pandas as pd
+
+        (layer,) = ensure_aligned(self.of, crs=crs)
+        target = parcels.copy()
+        if self.within_mi and self.within_mi > 0:
+            target[target.geometry.name] = parcels.geometry.buffer(
+                self.within_mi * _METERS_PER_MILE
+            )
+        joined = gpd.sjoin(
+            target[[target.geometry.name]],
+            layer[[layer.geometry.name]],
+            predicate="intersects",
+            how="left",
+        )
+        counts = joined.groupby(joined.index)["index_right"].count()
+        return pd.Series(counts, index=parcels.index, name="nearby_count").fillna(0)
+
+
+@dataclass
 class Index(Criterion):
     """Score from a precomputed index: a column already on the parcels, or a
     layer spatially joined to them."""

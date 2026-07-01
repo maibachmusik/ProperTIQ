@@ -50,6 +50,7 @@ class BlockSpec:
     label: str
     description: str  # plain-language: what this rule does
     params: tuple[ParamSpec, ...] = field(default_factory=tuple)
+    category: str = "General"  # UI/docs grouping, e.g. "Site & terrain"
 
 
 # --------------------------------------------------------------------------- #
@@ -64,6 +65,7 @@ REGISTRY: tuple[BlockSpec, ...] = (
         key="min_area",
         kind="filter",
         cls=_f.MinArea,
+        category="Size & area",
         label="Minimum area",
         description="Keep only parcels at least this many acres. Drops anything too small.",
         params=(
@@ -81,6 +83,7 @@ REGISTRY: tuple[BlockSpec, ...] = (
         key="max_area",
         kind="filter",
         cls=_f.MaxArea,
+        category="Size & area",
         label="Maximum area",
         description="Keep only parcels no larger than this many acres. Drops anything too big.",
         params=(
@@ -98,6 +101,7 @@ REGISTRY: tuple[BlockSpec, ...] = (
         key="not_within",
         kind="filter",
         cls=_f.NotWithin,
+        category="Proximity & access",
         label="Exclude inside a layer",
         description="Remove parcels that overlap a layer you want to avoid (e.g. a floodplain).",
         params=(
@@ -113,6 +117,7 @@ REGISTRY: tuple[BlockSpec, ...] = (
         key="within",
         kind="filter",
         cls=_f.Within,
+        category="Proximity & access",
         label="Keep inside a layer",
         description="Keep only parcels that fall inside a boundary (e.g. a service area).",
         params=(
@@ -128,6 +133,7 @@ REGISTRY: tuple[BlockSpec, ...] = (
         key="attr_in",
         kind="filter",
         cls=_f.AttrIn,
+        category="Attributes",
         label="Allowed values",
         description="Keep parcels whose attribute is one of an allowed set (e.g. allowed zoning).",
         params=(
@@ -150,6 +156,7 @@ REGISTRY: tuple[BlockSpec, ...] = (
         key="attr_range",
         kind="filter",
         cls=_f.AttrRange,
+        category="Attributes",
         label="Numeric range",
         description="Keep parcels whose numeric attribute falls within a min/max range.",
         params=(
@@ -175,11 +182,108 @@ REGISTRY: tuple[BlockSpec, ...] = (
             ),
         ),
     ),
+    BlockSpec(
+        key="within_distance",
+        kind="filter",
+        cls=_f.WithinDistance,
+        category="Proximity & access",
+        label="Within distance of a layer",
+        description="Keep parcels within so many miles of a layer — road, utility, or water access.",
+        params=(
+            ParamSpec(
+                "layer",
+                "layer",
+                "Near this layer",
+                "The layer parcels must be close to (e.g. roads, power lines, water).",
+            ),
+            ParamSpec(
+                "max_mi",
+                "number",
+                "Max distance (miles)",
+                "Parcels farther than this many miles from the layer are dropped.",
+                default=1.0,
+                min=0,
+            ),
+        ),
+    ),
+    BlockSpec(
+        key="count_range",
+        kind="filter",
+        cls=_f.CountRange,
+        category="Site & terrain",
+        label="Nearby feature count",
+        description="Keep parcels by how many features are on or near them (e.g. vacant, or built-up).",
+        params=(
+            ParamSpec(
+                "of",
+                "layer",
+                "Count features from",
+                "The layer to count (e.g. building footprints).",
+            ),
+            ParamSpec(
+                "within_mi",
+                "number",
+                "Search radius (miles)",
+                "Count features within this distance; 0 counts only features on the parcel itself.",
+                default=0.0,
+                min=0,
+            ),
+            ParamSpec(
+                "min",
+                "number",
+                "Minimum count",
+                "Keep parcels with at least this many nearby features (blank = no minimum).",
+                required=False,
+            ),
+            ParamSpec(
+                "max",
+                "number",
+                "Maximum count",
+                "Keep parcels with at most this many (e.g. 0 = vacant; blank = no maximum).",
+                required=False,
+            ),
+        ),
+    ),
+    BlockSpec(
+        key="facing",
+        kind="filter",
+        cls=_f.Facing,
+        category="Site & terrain",
+        label="Cardinal direction facing",
+        description="Keep parcels that face a compass direction (e.g. south-facing land).",
+        params=(
+            ParamSpec(
+                "direction",
+                "select",
+                "Faces",
+                "The compass direction the parcel's slope should face.",
+                default="S",
+                options=("N", "NE", "E", "SE", "S", "SW", "W", "NW"),
+            ),
+            ParamSpec(
+                "tolerance_deg",
+                "number",
+                "Tolerance (degrees)",
+                "How far off the exact direction still counts (e.g. 45° = the whole quadrant).",
+                default=45.0,
+                min=0,
+                max=180,
+            ),
+            ParamSpec(
+                "field",
+                "field",
+                "Aspect column",
+                "The parcel column holding aspect in degrees (0=N, 90=E). Added by terrain data.",
+                default="aspect_deg",
+            ),
+        ),
+    ),
     # ---- Criteria (weighted scoring) ------------------------------------- #
     BlockSpec(
         key="proximity",
         kind="criterion",
         cls=_s.Proximity,
+        category="Proximity & access",
         label="Proximity to a layer",
         description="Score parcels by how close they are to a layer (e.g. reward being near highways).",
         params=(
@@ -211,6 +315,7 @@ REGISTRY: tuple[BlockSpec, ...] = (
         key="gap",
         kind="criterion",
         cls=_s.Gap,
+        category="Proximity & access",
         label="Competitor gap",
         description="Reward parcels with few competitors nearby — finds underserved gaps in the market.",
         params=(
@@ -239,9 +344,50 @@ REGISTRY: tuple[BlockSpec, ...] = (
         ),
     ),
     BlockSpec(
+        key="nearby_count",
+        kind="criterion",
+        cls=_s.NearbyCount,
+        category="Site & terrain",
+        label="Nearby feature density",
+        description="Score by how many features are nearby (e.g. structures, amenities) — density or isolation.",
+        params=(
+            ParamSpec(
+                "of",
+                "layer",
+                "Count features from",
+                "The layer whose nearby features are counted (e.g. buildings, amenities).",
+            ),
+            ParamSpec(
+                "within_mi",
+                "number",
+                "Search radius (miles)",
+                "Features within this many miles of a parcel are counted.",
+                default=1.0,
+                min=0,
+            ),
+            ParamSpec(
+                "prefer",
+                "select",
+                "Prefer",
+                "'high' rewards more nearby features (built-up); 'low' rewards fewer (isolated).",
+                default="high",
+                options=_PREFER_HL,
+            ),
+            ParamSpec(
+                "weight",
+                "number",
+                "Weight",
+                "How much this criterion counts. Weights are auto-balanced to sum to 100%.",
+                default=1.0,
+                min=0,
+            ),
+        ),
+    ),
+    BlockSpec(
         key="index",
         kind="criterion",
         cls=_s.Index,
+        category="Attributes",
         label="Index layer / column",
         description="Score from a precomputed index — a parcel column, or a layer joined to parcels (e.g. demand).",
         params=(
@@ -280,6 +426,7 @@ REGISTRY: tuple[BlockSpec, ...] = (
         key="attr_value",
         kind="criterion",
         cls=_s.AttrValue,
+        category="Attributes",
         label="Parcel attribute value",
         description="Score directly from a numeric parcel attribute (e.g. prefer lower assessed value).",
         params=(
@@ -340,3 +487,12 @@ def criteria() -> list[BlockSpec]:
 def all_keys() -> list[str]:
     """Every registered block key."""
     return [b.key for b in REGISTRY]
+
+
+def categories() -> list[str]:
+    """Unique block categories, in catalog order (for grouping in UIs/docs)."""
+    seen: list[str] = []
+    for b in REGISTRY:
+        if b.category not in seen:
+            seen.append(b.category)
+    return seen

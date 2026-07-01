@@ -56,5 +56,11 @@ def test_param_constructor_names_match_class():
 
 
 def test_filters_and_criteria_partition():
-    assert len(registry.filters()) == 6
-    assert len(registry.criteria()) == 4
+    assert len(registry.filters()) == 9
+    assert len(registry.criteria()) == 5
+
+
+def test_every_block_has_a_category():
+    for b in registry.REGISTRY:
+        assert b.category.strip(), f"{b.key} missing category"
+    assert "Site & terrain" in registry.categories()

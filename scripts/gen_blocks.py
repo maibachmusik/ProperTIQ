@@ -31,11 +31,12 @@ def _params_table(block) -> list[str]:
     return out
 
 
-for kind, title in (("filter", "Filters (hard pass/fail)"), ("criterion", "Scoring criteria")):
-    lines.append(f"## {title}")
+for category in registry.categories():
+    lines.append(f"## {category}")
     lines.append("")
-    for block in (b for b in registry.REGISTRY if b.kind == kind):
-        lines.append(f"### {block.label} — `{block.key}`")
+    for block in (b for b in registry.REGISTRY if b.category == category):
+        kind = "filter" if block.kind == "filter" else "criterion"
+        lines.append(f"### {block.label} — `{block.key}` ({kind})")
         lines.append("")
         lines.append(block.description)
         lines.append("")

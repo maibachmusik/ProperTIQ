@@ -48,7 +48,9 @@ makes it free to give away and dissolves the data-moat problem that the paid too
   separate, optional deployable so non-technical users can compose/edit rules per
   deployment. It depends on the core; the core never depends on it. See spec 003.)*
 - ❌ Skip-tracing / outreach / CRM / valuation / sales forecasting.
-- ❌ Raster-first workflows (vector/parcel-centric first; raster criteria can come later).
+- ❌ Raster-first workflows (vector/parcel-centric first). *(Amended 2026-07-01:
+  bounded raster sampling is now in scope — the app derives terrain slope/aspect
+  from a 3DEP DEM to power the Site & terrain rules. See spec 006.)*
 
 ### Guardrail
 If a feature isn't *a new filter, a new scoring criterion, a new loader, or a new export*, it's
