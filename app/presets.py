@@ -66,6 +66,47 @@ PRESETS: list[dict] = [
         },
     },
     {
+        "key": "dry_buildable_soils",
+        "label": "🟫 Dry buildable soils",
+        "desc": "Flat, well-drained, non-hydric soil, out of the floodplain — avoids wet ground.",
+        "needs": ["slope_deg", "soil_hydric_pct", "soil_drainage", "floodplain"],
+        "config": {
+            "name": "dry_buildable_soils",
+            "filters": [
+                {"attr_range": {"field": "slope_deg", "max": 15}},
+                {"attr_range": {"field": "soil_hydric_pct", "max": 20}},
+                {"not_within": {"layer": "floodplain"}},
+                {
+                    "attr_in": {
+                        "field": "soil_drainage",
+                        "values": ["Well drained", "Moderately well drained"],
+                    }
+                },
+            ],
+            "score": [
+                {"attr_value": {"field": "slope_deg", "prefer": "low", "weight": 0.5}},
+                {"attr_value": {"field": "soil_hydric_pct", "prefer": "low", "weight": 0.5}},
+            ],
+        },
+    },
+    {
+        "key": "wooded_homesite",
+        "label": "🌲 Wooded homesite",
+        "desc": "Treed, gently sloped land — rewards canopy cover and flatter ground.",
+        "needs": ["canopy_pct", "slope_deg"],
+        "config": {
+            "name": "wooded_homesite",
+            "filters": [
+                {"attr_range": {"field": "canopy_pct", "min": 10}},
+                {"attr_range": {"field": "slope_deg", "max": 25}},
+            ],
+            "score": [
+                {"attr_value": {"field": "canopy_pct", "prefer": "high", "weight": 0.6}},
+                {"attr_value": {"field": "slope_deg", "prefer": "low", "weight": 0.4}},
+            ],
+        },
+    },
+    {
         "key": "vacant_land",
         "label": "🌳 Vacant land",
         "desc": "No structures on the parcel, out of the floodplain (needs the structures layer).",

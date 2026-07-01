@@ -40,6 +40,7 @@ def _load_preset(ss, preset: dict) -> None:
     ss.state = state
     ss.result = None
 
+
 # Verified Colorado Front Range county parcel portals (for the bring-your-own guide).
 _CO_PORTALS = [
     ("Larimer", "https://www.larimer.gov/it/gis", "GIS Digital Data page (no one-click hub)"),
@@ -196,21 +197,31 @@ def _load_area(st, ss, mode: str, method: str, query: str, radius: float, upload
 
     layers = _aoi.fetch_context(bbox)  # highways, floodplain
     try:
-        # Terrain is fast (3DEP): attach slope_deg + aspect_deg so Facing/slope
-        # rules work immediately. OSM structures/layers load on demand (slower).
+        # Fast open data: terrain (3DEP slope/aspect), canopy (LANDFIRE), soils
+        # (SSURGO). These power Facing/slope/canopy/soil rules immediately. OSM
+        # structures/layers load on demand (the first OSM pull is slow).
         parcels = _enrich.add_terrain(parcels)
     except Exception as exc:
         st.info(f"Terrain data unavailable ({exc}); other rules still work.")
+    try:
+        parcels, land_layers = _enrich.add_land(parcels, bbox)
+        layers.update(land_layers)
+    except Exception:
+        pass
 
     ss.parcels = parcels
     ss.layers = layers
     ss.aoi = {"label": label, "lat": lat, "lon": lon, "radius": radius, "bbox": bbox}
     ss.result = None
-    added = [c for c in ("slope_deg", "aspect_deg") if c in parcels.columns]
+    added = [
+        c
+        for c in ("slope_deg", "aspect_deg", "canopy_pct", "soil_drainage")
+        if c in parcels.columns
+    ]
     st.success(
         f"Loaded {len(parcels):,} parcels near {label} ({radius} mi). "
         f"Layers: {', '.join(layers) or 'none'}."
-        + (f" Terrain: {', '.join(added)}." if added else "")
+        + (f" Site data: {', '.join(added)}." if added else "")
     )
 
 

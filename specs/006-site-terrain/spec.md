@@ -32,8 +32,8 @@ access, and land characteristics (zoning, soils, rights).
 | Distance to utilities | `WithinDistance` / `Proximity` to a utilities layer | OSM `power=*` | **built** (proximity) |
 | Water access / features | `WithinDistance` / `Proximity` to a water layer | OSM waterways / NHD | **built** (proximity) |
 | Zoning | `AttrIn` on a `zone` column | county zoning | **built** (existing) |
-| Vegetation / tree density | `NearbyCount` of tree features, or an attribute from a canopy layer | OSM `natural=tree*` / NLCD canopy | **partial** (vector now; raster canopy = next) |
-| Soil / geology | `AttrIn`/`AttrRange`/`Index` on a soils layer joined to parcels | USDA SSURGO | **BYO / next** (bring the layer) |
+| Vegetation / tree density | `AttrRange`/`AttrValue` on a `canopy_pct` column | LANDFIRE 2024 canopy (raster) | **built** (terrain-style raster sampling) |
+| Soil / geology | `AttrIn`/`AttrRange` on `soil_drainage`/`soil_hydric_pct`/`soil_hydro_group`; `soils` layer for overlays | USDA SSURGO (SDA) | **built** (dominant-condition join) |
 | Water rights / ability | `AttrIn`/`AttrRange` on a rights attribute; or `WithinDistance` to a decree layer | CO DWR (administrative) | **BYO** (no clean open parcel attribute) |
 | Mineral rights | `AttrIn` on an ownership/severed-estate attribute | title/ownership data | **BYO** (rarely open) |
 
